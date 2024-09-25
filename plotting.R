@@ -528,7 +528,6 @@ plot.QFs = function(qF,qG,ylim = c(-2,2),colF = col1,colG = col2,
             c(qF(xlim[1]),qF(x.grid),qF(xlim[2]),qG(xlim[2]),qG(sort(x.grid,decreasing = TRUE)),qG(xlim[1])),
             border = NA,col = transp_grey)
     x.grid.dark = x.grid[qF(1-x.grid) > qG(x.grid) & x.grid >= 0.5]
-    print(qG(1-x.grid.dark))
     polygon(c(x.grid.dark,rev(x.grid.dark)),c(qF(1-x.grid.dark),qG(rev(x.grid.dark))),border = NA,col = darkgrey)
     plot(qF,xlim = c(0.5,1),col = col1,add =TRUE,n = 1000*(xlim[2] - xlim[1])+1, lwd = 2)
     plot(qG,xlim = c(0.5,1),col = col2,add =TRUE,n = 1000*(xlim[2] - xlim[1])+1, lwd = 2)
