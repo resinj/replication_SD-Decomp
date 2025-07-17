@@ -1,7 +1,9 @@
-# Some functions to be used in our studies
+# Computation and Approximation
+# Some functions that compute the distances and their decompositions
 
 ############################################################
-# Computation of the 1-Wasserstein distance and its decomposition using integrate()
+# Functions using numerical integration via integrate():
+# For the 1-Wasserstein distance and its decomposition
 wd = function(qF,qG) integrate(function(x) abs(qF(x) - qG(x)), 
                                lower = 0, upper = 1, stop.on.error = FALSE)$value
 wd_shift = function(qF,qG) integrate(function(x) pmax(0,pmin(qF(x/2) - qG(x/2),qF(1-x/2) - qG(1-x/2))), 
@@ -10,7 +12,7 @@ wd_disp = function(qF,qG) 0.5*integrate(function(x) pmax(0,qF(1-x/2) - qF(x/2) -
                                         lower = 0, upper = 1, stop.on.error = FALSE)$value
 wd_decomp = function(qF,qG) c(wd_shift(qF,qG),wd_shift(qG,qF),wd_disp(qF,qG),wd_disp(qG,qF))
 
-# Computation of the p-th power p-Wasserstein distance and its decomposition using integrate()
+# For the p-th power p-Wasserstein distance and its decomposition
 # Defaults to the squared 2-Wasserstein distance
 pwd = function(qF,qG,p = 2) integrate(function(x) (abs(qF(x) - qG(x)))^p, 
                                       lower = 0, upper = 1, stop.on.error = FALSE)$value
@@ -24,10 +26,10 @@ pwd_disp = function(qF,qG,p = 2) 0.5*integrate(function(x)
 pwd_decomp = function(qF,qG,p = 2) c(pwd_shift(qF,qG,p = p),pwd_shift(qG,qF,p = p),
                                      pwd_disp(qF,qG,p = p),pwd_disp(qG,qF,p = p))
 
-# Computation of the Cramér distance based on the CDFs (l_2 distance) using integrate()
+# For the Cramér distance based on the CDFs (l_2 distance)
 cd_CDF = function(pF,pG,lower = -Inf,upper = Inf) integrate(function(x) (pF(x) - pG(x))^2,
                                                             lower = lower,upper = upper,stop.on.error = FALSE)$value
-# Computation of the CD decomposition using integrate()
+# For the CD decomposition
 cd_shift = function(qF,qG) 0.5*integrate(function(y) 
   sapply(y, function(y) integrate(function(x,y) 
     pmax(0,pmin(qF(x/2) - qG(y/2),qF(1-x/2) - qG(1-y/2))) + pmax(0,qF(x/2) - qG(1-y/2)),
@@ -41,91 +43,111 @@ cd_disp = function(qF,qG) integrate(function(y)
 cd_decomp = function(qF,qG) c(cd_shift(qF,qG),cd_shift(qG,qF),cd_disp(qF,qG),cd_disp(qG,qF))
 
 ################################################################################
-# An approximation of the Cramér distance and its decomposition
-# based on a finite number of given quantiles
-# as described in Supplement S4.1
-cd_approx = function(quantiles.F, quantiles.G, # vectors of quantiles
-                     alphas, betas = NULL, # quantile levels
-                     return_decomp = TRUE){
-  K = length(alphas)
-  # Check required symmetries: Quantile levels (alphas) should be symmetric around 0.5 
-  # for the decomposition to make sense.
-  if(any(round(alphas + alphas[K:1],10) != 1))
-    warning("Quantile levels do not bound central prediction intervals.")
+# Functions for discrete distributions using summation 
+# as detailed in Supplement S4.1
+# For the 1-Wasserstein distance (area validation metric) and its decomposition
+wd_discrete = function(quantiles.F, quantiles.G, # vectors of quantiles
+                       levels.F,levels.G, # vectors of levels, where the quantile functions jump
+                       return_decomp = TRUE){
+  qF = stepfun(levels.F,quantiles.F,right = FALSE)
+  qG = stepfun(levels.G,quantiles.G,right = FALSE)
   
-  if(length(quantiles.F) != length(alphas)) 
-    stop("Number of quantiles of F (quantiles.F) does not match number of quantile levels
-         (alphas).")
-  if(is.null(betas)){
-    betas = alphas
-    print("Quantile levels of G (betas) set to match quantile levels of F (alphas).")
-  }
-  L = length(betas)
-  if(any(round(betas + betas[L:1],10) != 1)) warning("Quantile levels (betas) not symmetric.")
-  if(length(quantiles.G) != length(betas)) 
-    stop("Number of quantiles of G (quantiles.G) does not match number of quantile levels
-         (betas/alphas).")
+  alphas = c(levels.F,levels.G,0.5,1)
+  alphas = sort(c(alphas,1-alphas))
   
-  alphas_ext = sort(unique(round(c(0,alphas,1-alphas,1),digits = 10)))
-  betas_ext = sort(unique(round(c(0,betas,1-betas,1),digits = 10)))
+  n = length(alphas) - 1
+  N = n/2
+  a = alphas[-1] - alphas[1:n]
   
-  if(return_decomp){
-    # Approximate components
-    integrand_comps = function(i,j){
-      weight_a = (alphas_ext[i+2] - alphas_ext[i])/2
-      weight_b = (betas_ext[j+2] - betas_ext[j])/2
-      
-      lF = quantiles.F[i]
-      uF = quantiles.F[K+1 - i]
-      lG = quantiles.G[j]
-      uG = quantiles.G[L+1 - j]
-      
-      return(ifelse(round(alphas[i],10) == 0.5 || round(betas[j],10) == 0.5, 1, 2)*
-               # correction factor for the median times factor 2
-               weight_a*weight_b*
-               c(SFG = pmax(0,pmin(lF - lG, uF - uG) + pmax(0,lF - uG)),
-                 SGF = pmax(0,pmin(lG - lF, uG - uF) + pmax(0,lG - uF)),
-                 ifelse(alphas[i] == betas[j],0.5,1)* # correction at equal levels
-                   c(DFG = ifelse(betas[j] <= alphas[i], pmax(0, (uF - lF) - (uG - lG)), 0),
-                     DGF = ifelse(alphas[i] <= betas[j], pmax(0, (uG - lG) - (uF - lF)), 0))))
-    }
-    
-    comps = rowSums(apply(expand.grid(1:ceiling(K/2),1:ceiling(L/2)), 1,
-                          function(x) integrand_comps(x[1],x[2])))
-    return(comps)
-  }
-  else{
-    # Approximate CD
-    integrand_comps = function(i,j){
-      weight_a = (alphas_ext[i+2] - alphas_ext[i])/2
-      weight_b = (betas_ext[j+2] - betas_ext[j])/2
-      
-      lF = quantiles.F[i]
-      uF = quantiles.F[K+1 - i]
-      lG = quantiles.G[j]
-      uG = quantiles.G[L+1 - j]
-      
-      return(ifelse(round(alphas[i],10) == 0.5 || round(betas[j],10) == 0.5, 1, 2)*
-               # correction factor for the median times factor 2
-               weight_a*weight_b*
-               (ifelse(alphas[i] == betas[j],0.5,1)* # correction at equal levels
-                  (ifelse(sign(alphas[i] - betas[j]) != sign(lF - lG),abs(lF - lG),0) +
-                     ifelse(sign(alphas[K+1 - i] - betas[L+1 - j]) != sign(uF - uG),abs(uF - uG),0)) +
-                  ifelse(sign(alphas[i] - betas[L+1 - j]) != sign(lF - uG),abs(lF - uG),0) +
-                  ifelse(sign(alphas[K+1 - i] - betas[j]) != sign(uF - lG),abs(uF - lG),0)))
-    }
-    
-    cd = sum(apply(expand.grid(1:ceiling(K/2),1:ceiling(L/2)), 1,
-                   function(x) integrand_comps(x[1],x[2])))
-    return(cd)
-  }
+  wd  = sum(a*abs(qF(alphas[-(n+1)]) - qG(alphas[-(n+1)])))
+  
+  shift_p = 2*sum(a[1:N]*pmax(0,pmin(qF(alphas[1:N]) - qG(alphas[1:N]),qF(alphas[n:(N+1)]) - qG(alphas[n:(N+1)]))))
+  shift_m = 2*sum(a[1:N]*pmax(0,pmin(qG(alphas[1:N]) - qF(alphas[1:N]),qG(alphas[n:(N+1)]) - qF(alphas[n:(N+1)]))))
+  disp_p = sum(a[1:N]*pmax(0,qF(alphas[n:(N+1)]) - qG(alphas[n:(N+1)]) - qF(alphas[1:N]) + qG(alphas[1:N])))
+  disp_m = sum(a[1:N]*pmax(0,qG(alphas[n:(N+1)]) - qF(alphas[n:(N+1)]) - qG(alphas[1:N]) + qF(alphas[1:N])))
+  
+  if(return_decomp) return(c(shift_p,shift_m,disp_p,disp_m))
+  else return(wd)
 }
 
+# For the CD and its decomposition
+cd_discrete = function(quantiles.F, quantiles.G, # vectors of quantiles
+                       levels.F,levels.G, # vectors of levels, where the quantile functions jump
+                       return_decomp = TRUE){
+  qF = stepfun(levels.F,quantiles.F,right = FALSE)
+  qG = stepfun(levels.G,quantiles.G,right = FALSE)
+  
+  alphas = c(levels.F,levels.G,0.5,1)
+  alphas = sort(c(alphas,1-alphas))
+  
+  n = length(alphas) - 1
+  N = n/2
+  a = alphas[-1] - alphas[1:n]
+  
+  ij = expand.grid(i = 1:n,j = 1:n)
+  i = ij$i
+  j = ij$j
+  
+  cd  = sum(a[i]*a[j]*ifelse(i == j,1,2)*ifelse(i <= j, 
+                                                pmax(0,qF(alphas[i]) - qG(alphas[j])),
+                                                pmax(0,qG(alphas[j]) - qF(alphas[i]))))
+  
+  ij = expand.grid(i = 1:N,j = 1:N)
+  i = ij$i
+  j = ij$j
+  
+  shift_p = 2*sum(a[i]*a[j]*(pmax(0,pmin(qF(alphas[n+1-i]) - qG(alphas[n+1-j]),
+                                         qF(alphas[i]) - qG(alphas[j]))) 
+                             + pmax(0,qF(alphas[i]) - qG(alphas[n+1-j]))))
+  shift_m = 2*sum(a[i]*a[j]*(pmax(0,pmin(qG(alphas[n+1-i]) - qF(alphas[n+1-j]),
+                                         qG(alphas[i]) - qF(alphas[j]))) 
+                             + pmax(0,qG(alphas[i]) - qF(alphas[n+1-j]))))
+  disp_p = sum(a[i]*a[j]*ifelse(i == j,1,2)*ifelse(i >= j,pmax(0,qF(alphas[n+1-i]) - qG(alphas[n+1-j]) - qF(alphas[i]) + qG(alphas[j])),0))
+  disp_m = sum(a[i]*a[j]*ifelse(i == j,1,2)*ifelse(i >= j,pmax(0,qG(alphas[n+1-i]) - qF(alphas[n+1-j]) - qG(alphas[i]) + qF(alphas[j])),0))
+  
+  
+  if(return_decomp) return(c(shift_p,shift_m,disp_p,disp_m))
+  else return(cd)
+}
 
+################################################################################
+# Approximations
+# Via linear interpolation (see Supplement S4.2)
+approx_linear = function(quantiles.F, quantiles.G, # vectors of quantiles
+                         betas, gammas = NULL, # quantile levels
+                         support = NULL, # a vector with lower and upper bounds used for the interpolation in the tails
+                         distance = "WD", # either "WD" or "CD"
+                         return_decomp = TRUE){
+  if(is.null(support)) support = c(min(quantiles.F,quantiles.G), max(quantiles.F,quantiles.G))
+  
+  qFhat = approxfun(x = c(0,betas,1), y = c(support[1], quantiles.F, support[2]))
+  if(is.null(gammas)) qGhat = approxfun(x = c(0,betas,1), y = c(support[1], quantiles.G,support[2]))
+  else qGhat = approxfun(x = c(0,gammas,1), y = c(support[1], quantiles.G,support[2]))
+  
+  if(distance == "WD"){
+    if(return_decomp) return(wd_decomp(qFhat,qGhat))
+    else return(wd(qFhat,qGhat))
+  }
+  else if(distance == "CD"){
+    if(return_decomp) return(cd_decomp(qFhat,qGhat))
+    else return(sum(cd_decomp(qFhat,qGhat)))
+  }
+  else warning("distance should be either WD or CD.")
+}
 
-
-
-
-
-
+# Via discretization (see Supplement S4.3)
+approx_discrete = function(quantiles.F, quantiles.G, # vectors of quantiles
+                              betas, gammas = NULL, # quantile levels
+                              distance = "WD", # either "WD" or "CD"
+                              return_decomp = TRUE){
+  
+  
+  levels.F = (betas[-1] + betas[-length(betas)])/2
+  if(is.null(gammas)) levels.G = levels.F
+  else levels.G = (gammas[-1] + gammas[-length(gammas)])/2
+  
+  if(distance == "WD") return(wd_discrete(quantiles.F,quantiles.G,levels.F,levels.G,return_decomp))
+  else if(distance == "CD") return(cd_discrete(quantiles.F,quantiles.G,levels.F,levels.G,return_decomp))
+  else warning("distance should be either WD or CD.")
+}
 
