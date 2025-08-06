@@ -304,21 +304,53 @@ ylim = c(-4.6,6.6)
 qF = qF.shift.disp.norm
 qG = qF.std.norm
 
+a = -4
+b = 6
+
+alpha = seq(0.05,0.95,0.1)
+k = length(alpha)+1
+weights_padded = c(0.05,rep(c(0.1,0),k-1)[-1],0.05)
+f = c(a,qF(alpha),b)
+g = c(a,qG(alpha),b)
+
 pdf("figures/FigS5.pdf",width = 4.5,height = 3)
 par(mar = c(2.2,2.2,0.2,0),mgp = c(1.2,0.4,0))
 
+fu = ifelse(f[1:k+1] - g[1:k] >= g[1:k+1] - f[1:k],f[1:k+1],f[1:k])
+qFu = function(p) qF.pw.unif(p,rep(fu,each = 2),weights = weights_padded)
+gu = ifelse(f[1:k+1] - g[1:k] >= g[1:k+1] - f[1:k],g[1:k],g[1:k+1])
+qGu = function(p) qF.pw.unif(p,rep(gu,each = 2),weights = weights_padded)
 plot.avm_decomp(qFu,qGu,ylim = ylim,use_legend = FALSE,lab_F = NA,lab_G = NA,
                 col_dispF = grey,col_shiftF = grey,col_shiftF_double = darkgrey)
 plot.add_orig()
 
+fl = ifelse(f[1:k] >= g[1:k], f[1:k], pmin(f[1:k+1],g[1:k]))
+qFl = function(p) qF.pw.unif(p,rep(fl,each = 2),weights = weights_padded)
+gl = ifelse(f[1:k] >= g[1:k],pmin(g[1:k+1],f[1:k]),g[1:k])
+qGl = function(p) qF.pw.unif(p,rep(gl,each = 2),weights = weights_padded)
 plot.avm_decomp(qFl,qGl,ylim = ylim,use_legend = FALSE,lab_F = NA,lab_G = NA,
                 col_dispF = grey,col_shiftF = grey,col_shiftF_double = darkgrey)
 plot.add_orig()
 
+fsu = f[1:k+1]
+qFsu = function(p) qF.pw.unif(p,rep(fsu,each = 2),weights = weights_padded)
+gsd = g[1:k]
+qGsd = function(p) qF.pw.unif(p,rep(gsd,each = 2),weights = weights_padded)
 plot.avm_decomp(qFsu,qGsd,ylim = ylim,use_legend = FALSE,lab_F = NA,lab_G = NA,
                 col_dispF = grey) #, col_shiftF = grey,col_shiftF_double = darkgrey)
 plot.add_orig()
 
+if(k%%2 != 0){
+  alpha_ext = c(alpha[alpha < 0.5],0.5,alpha[alpha > 0.5])
+  K = ceiling(k/2)
+  f_ext = f[c(1:K,K:(k+1))]
+  g_ext = g[c(1:K,K:(k+1))]
+  weights_ext = c(weights_padded[1:(k-1)],0.05,0,0.05,weights_padded[(k+1):length(weights_padded)])
+}
+fdu = f_ext[c(1:(K-1),(K+1):(k+2))]
+qFdu = function(p) qF.pw.unif(p,rep(fdu,each = 2),weights = weights_ext)
+gdd = g_ext[c(2:K,K:(k+1))]
+qGdd = function(p) qF.pw.unif(p,rep(gdd,each = 2),weights = weights_ext)
 plot.avm_decomp(qFdu,qGdd,ylim = ylim,use_legend = FALSE,lab_F = NA,lab_G = NA,
                 #,col_dispF = grey,
                 col_shiftF = grey,col_shiftF_double = darkgrey)
