@@ -112,13 +112,17 @@ plot.avm_decomp = function(qF,qG,colF = col1,colG = col2,
   lines(1-x, qG(p_l), col = colG, lwd = 2)
   lines(1-x, qG(p_u), col = colG, lwd = 2)
   
-  atF = 0.9
-  atG = 0.95
-  text_in_circle(atF, qF((1+atF)/2), lab_F, col = colF)
-  text_in_circle(atF, qF((1-atF)/2), lab_F, col = colF)
-  text_in_circle(atG, qG((1+atG)/2), lab_G, col = colG)
-  text_in_circle(atG, qG((1-atG)/2), lab_G, col = colG)
-  
+  if(!is.na(lab_F)){
+    atF = 0.9
+    text_in_circle(atF, qF((1+atF)/2), lab_F, col = colF)
+    text_in_circle(atF, qF((1-atF)/2), lab_F, col = colF)
+  }
+  if(!is.na(lab_G)){
+    atG = 0.95
+    text_in_circle(atG, qG((1+atG)/2), lab_G, col = colG)
+    text_in_circle(atG, qG((1-atG)/2), lab_G, col = colG)
+  }
+
   if(use_legend){
     legend(legend_loc, col = c(col_dispF, col_shiftF, col_dispG, col_shiftG),
            legend = c(expression(Disp["+"]),expression(Shift["+"]),

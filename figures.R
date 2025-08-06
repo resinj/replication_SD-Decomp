@@ -279,3 +279,52 @@ wd_decomp(qF,qG)/wd(qF,qG) # 1-WD: 20% shift
 cd_decomp(qF,qG)
 cd_decomp(qF,qG)/sum(cd_decomp(qF,qG)) # CD: 8.6% shift
 
+################################################################################
+# Figure S5
+plot.add_orig = function(){
+  points(abs(1-2*alpha), f[-c(1,k+1)],pch = 16,col = col1)
+  plot(function(a) qF(0.5 + a/2),col = col1, lty = 2,add = TRUE)
+  plot(function(a) qF(0.5 - a/2),col = col1, lty = 2,add = TRUE)
+  points(abs(1-2*alpha), g[-c(1,k+1)],pch = 16,col = col2)
+  plot(function(a) qG(0.5 + a/2),col = col2, lty = 2,add = TRUE)
+  plot(function(a) qG(0.5 - a/2),col = col2, lty = 2,add = TRUE)
+  
+  lab_F = "F"
+  lab_G = "G"
+  atF = 0.95
+  atG = 0.95
+  text_in_circle(atF, qF((1+atF)/2), lab_F, col = col1)
+  text_in_circle(atF, qF((1-atF)/2), lab_F, col = col1)
+  text_in_circle(atG, qG((1+atG)/2), lab_G, col = col2)
+  text_in_circle(atG, qG((1-atG)/2), lab_G, col = col2)
+}
+
+ylim = c(-4.6,6.6)
+
+qF = qF.shift.disp.norm
+qG = qF.std.norm
+
+pdf("figures/FigS5.pdf",width = 4.5,height = 3)
+par(mar = c(2.2,2.2,0.2,0),mgp = c(1.2,0.4,0))
+
+plot.avm_decomp(qFu,qGu,ylim = ylim,use_legend = FALSE,lab_F = NA,lab_G = NA,
+                col_dispF = grey,col_shiftF = grey,col_shiftF_double = darkgrey)
+plot.add_orig()
+
+plot.avm_decomp(qFl,qGl,ylim = ylim,use_legend = FALSE,lab_F = NA,lab_G = NA,
+                col_dispF = grey,col_shiftF = grey,col_shiftF_double = darkgrey)
+plot.add_orig()
+
+plot.avm_decomp(qFsu,qGsd,ylim = ylim,use_legend = FALSE,lab_F = NA,lab_G = NA,
+                col_dispF = grey) #, col_shiftF = grey,col_shiftF_double = darkgrey)
+plot.add_orig()
+
+plot.avm_decomp(qFdu,qGdd,ylim = ylim,use_legend = FALSE,lab_F = NA,lab_G = NA,
+                #,col_dispF = grey,
+                col_shiftF = grey,col_shiftF_double = darkgrey)
+plot.add_orig()
+
+dev.off()
+
+
+
